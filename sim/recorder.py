@@ -148,6 +148,8 @@ class TrajectoryRecorder:
         self.n_genes = env.G.shape[1]
         self._agents, self._world, self._fauna, self._events, self._births, self._obs = [], [], [], [], [], []
         self._manual_seen = 0
+        self._extras: dict[str, list] = {}
+        self.skipped = 0
         self._manual: list[dict] = []
         self._ticks_in_chunk = 0
         self.chunks: list[dict] = []
@@ -225,7 +227,16 @@ class TrajectoryRecorder:
             ob = {k: obs[k][al].copy() for k in ("grid", "self", "neighbors", "heard")}
         self._pre = (raw, w, fa, ob)
 
-    def post(self, actions, rewards, info, policy_state=None):
+    def skip(self, info):
+        """A tick that is NOT recorded (sampled recording): still log births and interventions so the
+        births table and manual log stay complete."""
+        self._add_births(np.flatnonzero(info["born"]))
+        if len(self.env.manual_log) > self._manual_seen:
+            self._manual.extend(dict(m) for m in self.env.manual_log[self._manual_seen:])
+            self._manual_seen = len(self.env.manual_log)
+        self.skipped += 1
+
+    def post(self, actions, rewards, info, policy_state=None, extras: dict | None = None):
         """Complete the tick with what the agents did and what happened to them. Call right after env.step()."""
         if self._pre is None:
             raise RuntimeError("post() without pre()")
@@ -244,6 +255,8 @@ class TrajectoryRecorder:
             cause[idx] = [cmap.get(int(u), -1) for u in raw[1][idx, 0]]
         ps = np.asarray(policy_state)[al] if policy_state is not None else np.full(al.size, -1)
         r = (env.tick - 1, raw, np.asarray(actions)[al], np.asarray(rewards)[al], died, cause, ps)
+        for k, v in (extras or {}).items():      # learner internals per agent row (value, action probabilities, ...)
+            self._extras.setdefault(k, []).append(np.asarray(v)[al])
         born = np.flatnonzero(info["born"])
         self._add_births(born)
         if len(env.manual_log) > self._manual_seen:
@@ -286,6 +299,9 @@ class TrajectoryRecorder:
             data["births_genes"] = np.concatenate([g for _, g in self._births])
         if self._fauna:
             data["fauna"] = np.concatenate(self._fauna)
+        for name, v in self._extras.items():
+            data[f"x_{name}"] = np.concatenate(v)
+        self._extras = {}
         if self._obs:
             for key in ("grid", "self", "neighbors", "heard"):
                 data[f"obs_{key}"] = np.concatenate([o[key] for o in self._obs])
@@ -324,7 +340,8 @@ class TrajectoryRecorder:
         self._writer.join()
         if self._err:
             raise RuntimeError("trajectory writer failed") from self._err[0]
-        idx = dict(format_version=FORMAT_VERSION, ticks=self.ticks, agent_rows=self.rows, bytes=self.bytes,
+        idx = dict(format_version=FORMAT_VERSION, ticks=self.ticks, skipped_ticks=self.skipped, agent_rows=self.rows,
+                   bytes=self.bytes,
                    start_tick=self.start_tick, end_tick=int(self.env.tick), chunks=self.chunks,
                    state_hash_end=self.env.state_hash(), finished=time.strftime("%Y-%m-%dT%H:%M:%S"),
                    **(summary or {}))

@@ -187,9 +187,12 @@ class Sim:
 
     def __init__(self, seed: int, policy: str, n_agents: int | None, config: str | None,
                  overrides: dict | None = None, log_root: Path | None = None, speed: float = 1.0,
-                 agent_log: bool = True, record: bool = True, record_obs: bool | None = None):
+                 agent_log: bool = True, record: bool = True, record_obs: bool | None = None,
+                 checkpoint: str | None = None):
         self.config_path = config
         self.agent_log = agent_log
+        self.checkpoint = checkpoint
+        self.policies = POLICIES + (("ppo",) if checkpoint else ())
         self.record = record
         self.record_obs = record_obs
         self.base_overrides = overrides or {}
@@ -212,8 +215,8 @@ class Sim:
 
     # ---------------------------------------------------------------- setup / teardown
     def _build(self, seed, policy, n_agents):
-        if policy not in POLICIES:
-            raise ValueError(f"policy must be one of {POLICIES}")
+        if policy not in self.policies:
+            raise ValueError(f"policy must be one of {self.policies}")
         ov = json.loads(json.dumps(self.base_overrides))
         if n_agents:
             ov.setdefault("agents", {})["n_initial"] = int(n_agents)
@@ -223,7 +226,14 @@ class Sim:
         env = GenesisEnv(cfg, seed=seed)
         self.env = env
         self.policy_name = policy
-        self.policy = make_baseline(policy, env, seed=seed)
+        if policy == "ppo":
+            from agents.learned import LearnedPolicy   # torch only when a learner is used
+            self.policy = LearnedPolicy(self.checkpoint, env, seed=seed)
+            self.policy_desc = f"PPO learner · {Path(self.checkpoint).parent.parent.name} iter {self.policy.iter}"
+        else:
+            self.policy = make_baseline(policy, env, seed=seed)
+            self.policy_desc = f"{policy} baseline · non-learning"
+
         self.obs = env.observe()
         stamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
         self.logger = ViewerRunLogger(self.log_root / f"{stamp}_s{seed}_{policy}", env,
@@ -277,7 +287,8 @@ class Sim:
         h, wsurf, flood = scene_heights(env)
         cfg = env.cfg
         hdr = dict(
-            type="init", W=env.W, H=env.H, seed=env.seed, policy=self.policy_name, policies=list(POLICIES),
+            type="init", W=env.W, H=env.H, seed=env.seed, policy=self.policy_name, policies=list(self.policies),
+            policy_desc=self.policy_desc,
             action_names=env.action_names, tpd=env.tpd, season_len=env.season_len, year_len=env.year_len,
             n_initial=cfg.agents.n_initial, max_agents=env.N, base_tps=BASE_TPS,
             fauna_initial=[cfg.fauna.small_prey.initial, cfg.fauna.large_prey.initial, cfg.fauna.predators.initial],
@@ -446,7 +457,16 @@ class Sim:
             action=env.action_names[int(I[i, I_LAST_ACTION])] if 0 <= I[i, I_LAST_ACTION] < env.n_actions else "?",
             history=[env.action_names[a] for a in hist[-hl:]], genes=[round(float(g), 3) for g in env.G[i]],
             stats={n: round(float(v), 3) for n, v in zip(STAT_NAMES, S[i])},
+            mind=self._mind(i),
         )
+
+    def _mind(self, i: int):
+        """A learner's internals for slot i at its last decision: value estimate and action probabilities."""
+        last = getattr(self.policy, "last", None)
+        if not last:
+            return None
+        return dict(value=round(float(last["value"][i]), 4),
+                    probs={n: round(float(p), 4) for n, p in zip(self.env.action_names, last["probs"][i])})
 
     # ---------------------------------------------------------------- commands
     def _apply(self, cmd: dict):
@@ -503,7 +523,8 @@ class Sim:
         actions = self.policy.act(self.obs, env.alive)
         self.obs, rewards, _, info = env.step(actions)
         if rec:
-            rec.post(actions, rewards, info, policy_state=getattr(self.policy, "mode", None))
+            rec.post(actions, rewards, info, policy_state=getattr(self.policy, "mode", None),
+                     extras=getattr(self.policy, "last", None))
         if info["born"].any():
             self.policy.reset(info["born"])
         self.agent_ticks += int(info["alive"].sum())
@@ -652,7 +673,8 @@ def start_sim_thread(sim: Sim) -> threading.Thread:
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--policy", default="heuristic", choices=POLICIES)
+    ap.add_argument("--policy", default="heuristic", choices=POLICIES + ("ppo",))
+    ap.add_argument("--checkpoint", default=None, help="trained learner (runs/stage2/<name>/checkpoints/*.pt); enables --policy ppo")
     ap.add_argument("--agents", type=int, default=None, help="initial agents (default: config agents.n_initial)")
     ap.add_argument("--config", default=None, help="experiment YAML deep-merged over configs/default.yaml")
     ap.add_argument("--speed", type=float, default=1.0, help=f"multiple of {BASE_TPS:g} ticks/s; 0 = max")
@@ -666,7 +688,7 @@ def main():
         raise SystemExit("three.js missing: run `make viewer-setup` (npm install in viewer/)")
     print(f"GENESIS viewer: building world (seed {a.seed}, policy {a.policy}) ...", flush=True)
     sim = Sim(a.seed, a.policy, a.agents, a.config, speed=a.speed, agent_log=not a.no_agent_log,
-              record=not a.no_record, record_obs=True if a.record_obs else None)
+              record=not a.no_record, record_obs=True if a.record_obs else None, checkpoint=a.checkpoint)
     th = start_sim_thread(sim)
     sim.ready.wait()
     print(f"world ready in {sim.build_s:.1f}s; {sim.env.population()} agents; logging to "

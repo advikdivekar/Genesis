@@ -83,7 +83,7 @@ export class HUD {
     this.history = (init.history || []).slice();
     this.spd = init.tpd / init.sample_every;   // samples per sim day
     $('seed-label').textContent = `seed ${init.seed} · ${init.n_initial} agents`;
-    $('policy-pill').textContent = `${init.policy} baseline · non-learning`;
+    $('policy-pill').textContent = init.policy_desc || `${init.policy} baseline · non-learning`;
     $('rs-seed').value = init.seed; $('rs-agents').value = init.n_initial;
     $('rs-policy').innerHTML = init.policies.map((p) => `<option ${p === init.policy ? 'selected' : ''}>${p}</option>`).join('');
     const ECO = ['cooperative_large_prey', 'huddle_warmth'];
@@ -272,6 +272,15 @@ export class HUD {
     $('insp-genes').innerHTML = d.genes.map((g, i) => `<div title="g${i} = ${g}" style="height:${((g + 1) / 2 * 100).toFixed(0)}%"></div>`).join('');
     $('insp-hist').innerHTML = d.history.slice(-16).map((a) => `<span>${(ACTION_LABEL[a] || ['•'])[0]} ${a.replace('move_', '')}</span>`).join('');
     $('insp-follow').classList.toggle('on', this.app.followUid === d.uid);
+    if (d.mind) {
+      const top = Object.entries(d.mind.probs).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      $('insp-mind').innerHTML = `<h4>Learner's decision</h4><div class="insp-grid"><span class="k">value estimate</span><span class="v">${d.mind.value.toFixed(3)}</span></div>` +
+        top.map(([a, p]) => `<div class="bar-row"><span>${a.replace('move_', '→ ')}</span><div class="track"><div class="fill" style="width:${(p * 100).toFixed(1)}%;background:#c9a0ff"></div></div><span class="v">${(p * 100).toFixed(0)}%</span></div>`).join('');
+      $('insp-note').textContent = 'Bars are body variables. The value estimate is how much future reward the network expects; the probabilities are how likely it was to choose each action.';
+    } else {
+      $('insp-mind').innerHTML = '';
+      $('insp-note').textContent = "Bars are the agent's own body variables. This agent runs a hand-written baseline policy, so it has no learned internal states.";
+    }
   }
   closeInspector() { $('inspector').classList.add('hidden'); }
 
