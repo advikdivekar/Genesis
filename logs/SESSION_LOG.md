@@ -71,3 +71,20 @@ remain in `runs/viewer/`; a safety check blocked a broad `rm`, so they were left
 - **Viewer shutdown bug:** SIGTERM left the server waiting up to 60 s for open WebSockets. The fix closes them in `on_shutdown` and sets
   `shutdown_timeout=3`. The 20:38 and 20:58 sessions both still closed cleanly, with summaries and AGENT_LOG entries.
 - Wrote `TEACHER.md`: RL concepts explained through GENESIS, a glossary, and an FAQ built from the user's questions.
+
+### Session 3, continued: PR #1, Stage 2 first slice (2026-10-26, ~21:05–23:10)
+- **PR #1** opened on HeetRanpura/Genesis (branch `session3-viewer-recorder` on the fork advikdivekar/Genesis-advik).
+  Author: Advik Divekar only, no co-authors.
+- **Stage 2 learner** on branch `stage2-ppo`:
+  - `agents/ppo.py` (recurrent PPO, shared network, per-agent GRU state reset at birth)
+  - `experiments/train_ppo.py` (training worlds 1000+, full flight recording, disk guard)
+  - `experiments/eval_policy.py` (same protocol as the baselines)
+  - `agents/learned.py`, and viewer `--checkpoint` (the inspector shows the learner's value estimate and action probabilities)
+  - `docs/PREREGISTRATION.md`, committed before any evaluation
+- **Bugs caught:**
+  - minibatch shuffle used numpy's unseeded global RNG. Fixed, and the run was restarted (the discarded run was moved to the scratchpad).
+  - a test tolerance was too tight (9e-8 float rounding).
+  - the queue loop's `pgrep -f` matched its own command line. It worked anyway, but my "fix" then killed the parent shell. The trainer survived and a watcher was added.
+- **Performance:** about 4–7k agent-steps/s on MPS. The update dominates, especially the backward pass. CPU was 4× slower.
+- **Results:** see AGENT_LOG and `reports/stage2/STAGE2_REPORT.md`. H1 supported, H2 not, H3 mixed.
+- **Disk:** about 6 GB of recordings for Stage 2. 29 GB free.

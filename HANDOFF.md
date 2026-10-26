@@ -7,7 +7,8 @@ Repo: https://github.com/HeetRanpura/Genesis (branch `main`, direct commits, no 
 **Machine (since session 3): MacBook Pro M3 Pro, 11 cores, 18 GB, no CUDA.** Stages 1–1.1 were benchmarked on an
 M4 Air, so don't compare throughput across machines. Python 3.11 venv in `.venv` (`make setup`, which now also installs the viewer).
 
-**Git:** session-3 work is committed locally (`41c19c2` viewer etc., then the recorder/TEACHER commit). **Not pushed.**
+**Git:** pushed to the fork `advikdivekar/Genesis-advik`. **PR #1** (viewer, recorder, analysis fix) and **PR #2** (Stage 2
+first slice, branch `stage2-ppo`, built on #1) are open on HeetRanpura/Genesis. Author: Advik Divekar only.
 
 ## Done
 - **Stage 1: world engine** (`ce1e40e`) and **Stage 1.1: food-limited fauna, faster observations** (`3c1d52d`).
@@ -60,13 +61,20 @@ The world also starts with 400 small prey, 48 large prey and 12 predators, which
    - the director is basic (it cuts to events and follows a struggling agent)
 6. Test sessions from this session's screenshots are still in `runs/viewer/` (git-ignored). Delete them if you don't want them.
 
-## Next stage (needs the user's go-ahead): Stage 2, agent minds
-See PLAN.md. Suggested first slice:
-- PyTorch (CPU/MPS) recurrent PPO with a parameter-shared GRU over `grid[N,11,11,16]` uint8, plus `self`, `neighbors` and `heard`.
-- Train online against `GenesisEnv`, and reset the recurrent state where `info["born"]`.
-- Beat all three baselines on survival, with CIs over at least 5 seeds **at 256 agents**, before adding world models.
-- To make learners drivable from the viewer, add a policy entry in `viewer/server.py: POLICIES` and `make_baseline`.
-- Watch out: torch bundles its own libomp, and Numba here uses the workqueue layer.
+## Stage 2: first slice done (2026-10-26). Read `reports/stage2/STAGE2_REPORT.md`
+- Recurrent PPO (`agents/ppo.py`) and a memoryless ablation, 20M agent-steps each, evaluated on held-out worlds 0–4.
+  - GRU learner: 1.80 [1.52, 2.10] deaths/agent-yr. Memoryless: 1.58 [1.35, 1.83]. Heuristic: 1.50 [1.04, 2.11].
+  - Both learners beat random and greedy. Neither is distinguishable from the heuristic yet.
+- The learners solved thirst, predators and fire, and now **starve**: energy intake roughly equals basal metabolism, they live on plants only, and they never hunt.
+- Memory cut thirst deaths but not overall mortality at this budget.
+- **Next:**
+  1. evaluate on held-out worlds periodically during training (the training curve is dominated by world and season cycles)
+  2. longer runs (100M+) with 3 training seeds per arm
+  3. an energy-economy check: can hunting or fruit ever pay? Report it; don't tune the world for the learner
+  4. Stage 3 social metrics on the learner recordings
+- Watch a learner live: `make viewer POLICY=ppo CKPT=runs/stage2/gru_s0/checkpoints/last.pt`. The inspector shows the network's
+  value estimate and action probabilities.
+- Disk: 29 GB free. Stage 2 recordings use about 6 GB (`runs/stage2*`). Each training run records every rollout (about 2 GB per 20M steps).
 
 ## Gotchas that cost time (details in CLAUDE.md)
 - `env.tick` includes the spin-up. Subtract `env.spinup_ticks` for anything measured from the start of a run.

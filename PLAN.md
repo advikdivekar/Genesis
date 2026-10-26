@@ -54,10 +54,11 @@ plasticity-injection ablations; lifetimes + heritable trait vectors + mutation (
 (model-of-others probe head, reputation obs, imitation channel from elders, costly limited-bandwidth symbols).
 
 **Accept when:**
-- [ ] PPO-GRU agents beat all three baselines on survival with CIs over ≥5 seeds.
+- [~] PPO-GRU agents beat all three baselines on survival with CIs over ≥5 seeds: beats random and greedy; **not yet
+      distinguishable from the heuristic** at 20M agent-steps (`reports/stage2/STAGE2_REPORT.md`).
 - [ ] World-model prediction error decreases online; imagined rollouts logged.
 - [ ] Forgetting/plasticity metrics computed on a fixed probe task set across seasons.
-- [ ] Integration test: a short training loop runs end-to-end and checkpoints/resumes identically.
+- [x] Integration test: a short training loop runs end-to-end deterministically; checkpoint round-trip (`tests/test_ppo.py`).
 
 ## Stage 3 — Emergence measurement
 **Build:** `/analysis` suite for individual, social, communication, culture, norms, resilience metrics
@@ -114,4 +115,5 @@ how to launch the viewer, three most promising next experiments.
 |---|---|
 | 1 World engine | done, plus Stage 1.1 tuning (food-limited fauna, ≥100k steps/min with obs at 1,000 agents) — awaiting review ([report](reports/stage1/STAGE1_REPORT.md)) |
 | 5 Live viewer | first slice done (three.js, 2026-10-26): live world, dashboard, inspector, controls, logging — see `docs/VIEWER.md` |
-| 2–4, 6–7 | not started (Stage 2 awaits the user's go-ahead) |
+| 2 Agent minds | first slice done: recurrent PPO + memoryless ablation, held-out evaluation (`reports/stage2/`) |
+| 3–4, 6–7 | not started |

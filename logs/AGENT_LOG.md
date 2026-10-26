@@ -150,3 +150,96 @@ Viewer run `runs/viewer/20261026_205803_s0_heuristic`: 1814 ticks (0.47 sim year
 - deaths/agent-year 1.11; deaths by cause {'thirst': 132, 'predator': 2}; population at end 256.
 - manual interventions: 0 (none). Sessions with interventions are not comparable to `run_baselines.py` numbers.
 - eating food another agent killed/dropped: 24 meals (a co-feeding count, not evidence of intentional sharing).
+
+## 2026-10-26 21:12 — Stage 2 training: smoke_mps
+
+PPO (GRU), 256 agents, 3 iterations × 128 ticks (98,304 agent-steps), training worlds 1000+ (eval worlds 0-4 held out).
+- deaths/agent-yr during training: first 1 iters 0.00 → last 1 iters 0.00 (training-time rate with exploration; not an evaluation).
+- last-iteration causes: {}; entropy 2.39.
+- logs: `runs/stage2/smoke_mps/train.jsonl`, checkpoints in `runs/stage2/smoke_mps/checkpoints/`.
+
+## 2026-10-26 21:14 — Stage 2 training: smoke_cpu
+
+PPO (GRU), 256 agents, 3 iterations × 128 ticks (98,304 agent-steps), training worlds 1000+ (eval worlds 0-4 held out).
+- deaths/agent-yr during training: first 1 iters 0.00 → last 1 iters 0.00 (training-time rate with exploration; not an evaluation).
+- last-iteration causes: {}; entropy 2.39.
+- logs: `runs/stage2/smoke_cpu/train.jsonl`, checkpoints in `runs/stage2/smoke_cpu/checkpoints/`.
+
+## 2026-10-26 21:14 — Stage 2 training: smoke_mps
+
+PPO (GRU), 256 agents, 3 iterations × 128 ticks (98,304 agent-steps), training worlds 1000+ (eval worlds 0-4 held out).
+- deaths/agent-yr during training: first 1 iters 0.00 → last 1 iters 0.00 (training-time rate with exploration; not an evaluation).
+- last-iteration causes: {}; entropy 2.39.
+- logs: `runs/stage2/smoke_mps/train.jsonl`, checkpoints in `runs/stage2/smoke_mps/checkpoints/`.
+
+## 2026-10-26 22:10 — Stage 2 training: gru_s0
+
+PPO (GRU), 256 agents, 600 iterations × 128 ticks (19,660,800 agent-steps), training worlds 1000+ (eval worlds 0-4 held out).
+- deaths/agent-yr during training: first 60 iters 2.00 → last 60 iters 1.29 (training-time rate with exploration; not an evaluation).
+- last-iteration causes: {}; entropy 1.09.
+- logs: `runs/stage2/gru_s0/train.jsonl`, checkpoints in `runs/stage2/gru_s0/checkpoints/`.
+
+## 2026-10-26 22:14 — Stage 2 evaluation: gru_s0
+
+Checkpoint `runs/stage2/gru_s0/checkpoints/last.pt`, 5 held-out seeds × 2.0 yr, 256 agents, sampled actions. Same protocol and statistics as `run_baselines.py`.
+
+| policy | deaths / agent-yr (95% CI) | Hedges' g (learner − baseline) |
+|---|---|---|
+| **learner (gru_s0)** | **1.80 [1.52, 2.10]** | |
+| random | 3.83 [3.53, 4.19] | -4.58 |
+| greedy | 3.31 [2.92, 3.77] | -2.97 |
+| heuristic | 1.50 [1.04, 2.11] | +0.50 |
+
+KM survival at 1 yr 0.062 [0.022, 0.111]; deaths by cause (summed) {'starvation': 3637, 'thirst': 231, 'cold': 700, 'fire': 17, 'predator': 15, 'old_age': 3}.
+Fully recorded: `runs/stage2_eval/gru_s0/s*/trajectory/`.
+
+## 2026-10-26 — Stage 2: first learner vs baselines, interpretation (written by hand)
+
+Against the preregistration (`docs/PREREGISTRATION.md`, committed `4c84dec` before evaluation):
+- **H1 (beats random and greedy): supported.** GRU learner 1.80 [1.52, 2.10] vs random 3.83 [3.53, 4.19] and greedy 3.31
+  [2.92, 3.77] deaths/agent-yr; CIs don't overlap (g = −4.6, −3.0).
+- **H2 (beats heuristic): not supported.** 1.80 [1.52, 2.10] vs 1.50 [1.04, 2.11]: CIs overlap, so the two are not
+  distinguishable at n = 5 (g = +0.5, point estimate worse). KM survival at 1 year is 0.062 vs 0.214.
+- **The causes of death changed completely.** Learner (5 seeds summed): starvation 3,637, cold 700, thirst 231,
+  fire 17, predator 15. Heuristic: thirst 2,460, cold 442, starvation 347, predator 289, fire 276. The learner nearly
+  removed the heuristic's main killers (thirst ÷10, predators ÷19, fire ÷16) and now dies mostly of starvation.
+- **Diet (seed 0 recordings):** energy intake is the same for both, 0.00133 vs 0.00131 per agent-tick, which is about
+  basal metabolism. Both live mostly on plants (0.03 energy per bite). The learner made 0 kills (hunting is 1.1% of its
+  actions) and drinks about 15× more often than the heuristic (77 vs 5 per 1,000 agent-ticks; mean hydration 0.87). Reading:
+  the learner solved water and danger, then hit the world's energy ceiling, which the heuristic never reached because thirst
+  killed its agents first. Why predator deaths fell is **not established**. It could be avoidance, or simply staying near
+  water and away from forests.
+- **Caveats:** 1 training seed, about 20M agent-steps (small), stochastic actions, diet measured on 1 seed. The training
+  curve was still improving (2.00 → 1.29 training-time rate), so H2 may be a budget limit.
+
+## 2026-10-26 22:52 — Stage 2 training: ff_s0
+
+PPO (memoryless), 256 agents, 600 iterations × 128 ticks (19,660,800 agent-steps), training worlds 1000+ (eval worlds 0-4 held out).
+- deaths/agent-yr during training: first 60 iters 2.21 → last 60 iters 1.14 (training-time rate with exploration; not an evaluation).
+- last-iteration causes: {}; entropy 1.00.
+- logs: `runs/stage2/ff_s0/train.jsonl`, checkpoints in `runs/stage2/ff_s0/checkpoints/`.
+
+## 2026-10-26 22:55 — Stage 2 evaluation: ff_s0
+
+Checkpoint `runs/stage2/ff_s0/checkpoints/last.pt`, 5 held-out seeds × 2.0 yr, 256 agents, sampled actions. Same protocol and statistics as `run_baselines.py`.
+
+| policy | deaths / agent-yr (95% CI) | Hedges' g (learner − baseline) |
+|---|---|---|
+| **learner (ff_s0)** | **1.58 [1.35, 1.83]** | |
+| random | 3.83 [3.53, 4.19] | -5.54 |
+| greedy | 3.31 [2.92, 3.77] | -3.63 |
+| heuristic | 1.50 [1.04, 2.11] | +0.15 |
+
+KM survival at 1 yr 0.101 [0.049, 0.167]; deaths by cause (summed) {'starvation': 2891, 'thirst': 618, 'cold': 483, 'fire': 27, 'predator': 26, 'old_age': 1}.
+Fully recorded: `runs/stage2_eval/ff_s0/s*/trajectory/`.
+
+## 2026-10-26 — Stage 2: memory ablation (H3), interpretation (written by hand)
+
+Memoryless learner `ff_s0` (same budget): **1.58 [1.35, 1.83]** deaths/agent-yr vs GRU 1.80 [1.52, 2.10]. Memoryless is
+better on **all 5** held-out worlds (all-cause g = +0.59 for GRU−FF). Thirst rate is GRU 0.09 [0.04, 0.14] vs FF 0.24
+[0.11, 0.36] (g = −1.15; the CIs touch, so not distinguishable at n = 5 by the preregistered rule), but starvation is
+GRU 1.42 vs FF 1.13. **H3 is mixed:** memory shifted deaths from thirst to starvation rather than reducing them.
+Both learners are about 2× better than random and greedy, and not distinguishable from the heuristic. The binding constraint for every
+competent policy is now the energy economy (intake ≈ basal metabolism, plants only, no hunting). Training-time
+mortality curves are dominated by the world-switch and season cycles, so held-out evaluation during training is needed. Full write-up:
+`reports/stage2/STAGE2_REPORT.md`.

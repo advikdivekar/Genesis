@@ -85,6 +85,10 @@ reward, and how does its order of emergence compare with human prehistory (as st
   loads/exports and `replay()` re-simulates bit-exactly (needs manual interventions in `env.manual_log` with every
   parameter incl. flood `radius`/`days_given`; if you add a trigger_* method, log all its args and teach `_apply_manual`).
   Any engine change that alters dynamics invalidates replay of older recordings (start-hash check catches it).
+- Learner facts: training worlds are seeds 1000+, evaluation seeds 0–4 are held out; eval protocol must match
+  `run_baselines.py` (256 agents, 2 years, `lifetimes(start_tick=spinup)`). PPO minibatch order uses `PPO.rng`
+  (never global numpy RNG). MPS is ~4× faster than CPU for updates; GPU arithmetic is not bit-exact across runs.
+  Training-time mortality is dominated by world switches/seasons: use held-out eval, not train.jsonl, for claims.
 - `TEACHER.md` is the team's RL study guide + FAQ: add new concepts/questions there.
 - Test arenas: `tests/helpers.py` (`make_env`, `clear_world`, `put_agent`) — 64×64, no respawn,
   disturbances neutralised.
@@ -98,6 +102,9 @@ reward, and how does its order of emergence compare with human prehistory (as st
   survival-analysis spin-up bug (baselines corrected: random 3.83 / greedy 3.31 / heuristic 1.50 deaths/agent-yr);
   density sweep shows water-seeking baselines collapse at 1,000 agents (heuristic 4.94, worse than random). 43 tests.
   Nothing committed yet. Stage 2 still awaits the user's go-ahead.
+- Stage 2 first slice (2026-10-26, branch `stage2-ppo`): recurrent PPO (`agents/ppo.py`, `make train/eval`), learners
+  1.58–1.80 deaths/agent-yr on held-out worlds: beat random/greedy, not distinguishable from heuristic (1.50); they
+  die of starvation (energy ceiling). Memory (GRU) cut thirst but not overall mortality at 20M steps.
 - Known limitations: predators sit at their immigration floor ~30% of the time when 256 heuristic
   agents compete with them for small prey; greedy baseline only slightly better than random (water usually out of
   view → needs memory); wildfires can burn ~10% of land; at ≥1,000 agents water-seeking baselines die of thirst

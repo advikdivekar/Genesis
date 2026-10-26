@@ -1,0 +1,124 @@
+{
+  "args": {
+    "checkpoint": "runs/stage2/gru_s0/checkpoints/last.pt",
+    "name": "gru_s0",
+    "seeds": 5,
+    "years": 2.0,
+    "agents": 256,
+    "greedy": false
+  },
+  "per_run": [
+    {
+      "policy": "ppo",
+      "seed": 0,
+      "wall_s": 45.6,
+      "deaths_per_agent_year": 1.7296892778014463,
+      "km_survival_1yr": 0.057705437114638665,
+      "median_lifetime_days": 11.704166666666667,
+      "deaths_by_cause": {
+        "starvation": 789,
+        "thirst": 76,
+        "cold": 15,
+        "fire": 3,
+        "predator": 2,
+        "old_age": 1
+      }
+    },
+    {
+      "policy": "ppo",
+      "seed": 1,
+      "wall_s": 44.7,
+      "deaths_per_agent_year": 1.868231253402961,
+      "km_survival_1yr": 0.02227658790432993,
+      "median_lifetime_days": 9.041666666666666,
+      "deaths_by_cause": {
+        "starvation": 686,
+        "thirst": 40,
+        "cold": 213,
+        "fire": 11,
+        "predator": 7
+      }
+    },
+    {
+      "policy": "ppo",
+      "seed": 2,
+      "wall_s": 44.0,
+      "deaths_per_agent_year": 2.367679852467324,
+      "km_survival_1yr": 0.00421033757411903,
+      "median_lifetime_days": 8.275,
+      "deaths_by_cause": {
+        "starvation": 880,
+        "thirst": 79,
+        "cold": 248,
+        "fire": 3,
+        "predator": 3
+      }
+    },
+    {
+      "policy": "ppo",
+      "seed": 3,
+      "wall_s": 45.1,
+      "deaths_per_agent_year": 1.3510869587323797,
+      "km_survival_1yr": 0.15417589639484072,
+      "median_lifetime_days": 18.8875,
+      "deaths_by_cause": {
+        "starvation": 477,
+        "cold": 212,
+        "predator": 1,
+        "old_age": 2
+      }
+    },
+    {
+      "policy": "ppo",
+      "seed": 4,
+      "wall_s": 44.1,
+      "deaths_per_agent_year": 1.6691959825820375,
+      "km_survival_1yr": 0.07197104184942926,
+      "median_lifetime_days": 11.95,
+      "deaths_by_cause": {
+        "starvation": 805,
+        "thirst": 36,
+        "cold": 12,
+        "predator": 2
+      }
+    }
+  ],
+  "summary": {
+    "deaths_per_agent_year": [
+      1.7971766649972296,
+      1.5181376224364276,
+      2.100384963557091
+    ],
+    "km_survival_1yr": [
+      0.062067860167471525,
+      0.022135857614307315,
+      0.11135506378765628
+    ]
+  },
+  "vs_baselines": {
+    "random": {
+      "baseline": [
+        3.8281726782299437,
+        3.5338433587428737,
+        4.190300178970405
+      ],
+      "hedges_g_learner_minus_baseline": -4.576986266349353
+    },
+    "greedy": {
+      "baseline": [
+        3.3134847811804766,
+        2.9227629876120025,
+        3.767349317815436
+      ],
+      "hedges_g_learner_minus_baseline": -2.9742350783666605
+    },
+    "heuristic": {
+      "baseline": [
+        1.495808693390476,
+        1.0446202278541645,
+        2.1081138789448266
+      ],
+      "hedges_g_learner_minus_baseline": 0.5044276639512458
+    }
+  }
+}
